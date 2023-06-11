@@ -57,7 +57,7 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// validation
 		if len(args) != 2 {
-			return errors.New("only 2 files are acceptible")
+			return errors.New("only two words are acceptible")
 		}
 
 		if len(args[0]) > len(args[1]) {
