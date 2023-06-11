@@ -29,6 +29,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	stringLong, stringShort string
+)
+
+func snake(k, y int) int {
+	x := y - k
+	for x < len(stringShort) && y < len(stringLong) && stringLong[y] == stringShort[x] {
+		x++
+		y++
+	}
+	return y
+}
+
+func max(x, y int) int {
+	if x >= y {
+		return x
+	}
+	return y
+}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sabun",
@@ -39,9 +59,40 @@ var rootCmd = &cobra.Command{
 		if len(args) != 2 {
 			return errors.New("only 2 files are acceptible")
 		}
-		for _, arg := range args {
-			if _, err := os.Stat(arg); os.IsNotExist(err) {
-				return fmt.Errorf("'%s' cannot be found: %w", arg, err)
+
+		if len(args[0]) > len(args[1]) {
+			stringLong = args[0]
+			stringShort = args[1]
+		} else {
+			stringLong = args[1]
+			stringShort = args[0]
+		}
+
+		N := len(stringLong)
+		M := len(stringShort)
+		delta := N - M
+		offset := M + 1
+		fp := make([]int, M+N+3)
+		for i := range fp {
+			fp[i] = -1
+		}
+
+		for p := 0; p <= M; p++ {
+			for k := -p; k < delta; k++ {
+				fp[k+offset] = snake(k, max(fp[k-1+offset]+1, fp[k+1+offset]))
+			}
+			for k := delta + p; k >= delta+1; k-- {
+				fp[k+offset] = snake(k, max(fp[k-1+offset]+1, fp[k+1+offset]))
+			}
+			fp[delta+offset] = snake(delta, max(fp[delta-1+offset]+1, fp[delta+1+offset]))
+
+			for k := -p; k <= delta+p; k++ {
+				fmt.Printf("p=%d, k=%d, fp[%d]=%d\n", p, k, k+offset, fp[k+offset])
+			}
+
+			if fp[delta+offset] == N {
+				fmt.Println("edit distance: ", delta+2*p)
+				break
 			}
 		}
 
