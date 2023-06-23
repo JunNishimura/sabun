@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JunNishimura/sabun/internal/diff"
 	"github.com/spf13/cobra"
 )
 
@@ -37,11 +38,25 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// validation
 		if len(args) != 2 {
-			return errors.New("only 2 files are acceptible")
+			return errors.New("only two words are acceptible")
 		}
-		for _, arg := range args {
-			if _, err := os.Stat(arg); os.IsNotExist(err) {
-				return fmt.Errorf("'%s' cannot be found: %w", arg, err)
+
+		d := diff.NewDiff([]rune(args[0]), []rune(args[1]))
+		d.Compose()
+
+		fmt.Printf("edit distance: %d\n", d.EditDistance())
+		fmt.Printf("lcs: %s\n", string(d.Lcs()))
+		fmt.Printf("ses: \n")
+
+		for _, se := range d.Ses() {
+			el := se.GetElem()
+			switch se.GetType() {
+			case diff.SesInsert:
+				fmt.Printf("+%c\n", el)
+			case diff.SesDelete:
+				fmt.Printf("-%c\n", el)
+			case diff.SesCommon:
+				fmt.Printf(" %c\n", el)
 			}
 		}
 
