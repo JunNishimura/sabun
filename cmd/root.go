@@ -44,7 +44,21 @@ var rootCmd = &cobra.Command{
 		d := diff.NewDiff([]rune(args[0]), []rune(args[1]))
 		d.Compose()
 
-		fmt.Println("edit distance: ", d.EditDistance())
+		fmt.Printf("edit distance: %d\n", d.EditDistance())
+		fmt.Printf("lcs: %s\n", string(d.Lcs()))
+		fmt.Printf("ses: \n")
+
+		for _, se := range d.Ses() {
+			el := se.GetElem()
+			switch se.GetType() {
+			case diff.SesInsert:
+				fmt.Printf("+%c\n", el)
+			case diff.SesDelete:
+				fmt.Printf("-%c\n", el)
+			case diff.SesCommon:
+				fmt.Printf(" %c\n", el)
+			}
+		}
 
 		return nil
 	},
