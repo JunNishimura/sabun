@@ -1,7 +1,9 @@
 package diff
 
+import "fmt"
+
 const (
-	SesAdd SesType = iota
+	SesInsert SesType = iota
 	SesDelete
 	SesCommon
 )
@@ -13,35 +15,47 @@ type SesElem struct {
 	t SesType
 }
 
+func (e *SesElem) GetElem() rune {
+	return e.e
+}
+
+func (e *SesElem) GetType() SesType {
+	return e.t
+}
+
 type Point struct {
 	x, y int
 }
 
 type PointWithRoute struct {
-	x, y, r int
+	x, y, r int // rはDiff.routeスライスの何番目のインデックスから辿り着いたかを格納している
 }
 
 type Diff struct {
-	a, b  []rune
-	m, n  int
-	ed    int
-	lcs   []rune
-	ses   []*SesElem
-	path  []int
-	route []*PointWithRoute
+	a, b    []rune
+	m, n    int
+	reverse bool
+	ed      int
+	lcs     []rune
+	ses     []*SesElem
+	path    []int // 各kのroute idを保持
+	route   []*PointWithRoute
 }
 
 func NewDiff(a, b []rune) *Diff {
 	d := &Diff{}
 	m, n := len(a), len(b)
+	reverse := false
 	if m >= n {
 		a, b = b, a
 		n, m = m, n
+		reverse = true
 	}
 	d.a = a
 	d.b = b
 	d.n = n
 	d.m = m
+	d.reverse = reverse
 	d.ed = 0
 
 	return d
@@ -49,6 +63,27 @@ func NewDiff(a, b []rune) *Diff {
 
 func (d *Diff) EditDistance() int {
 	return d.ed
+}
+
+func (d *Diff) Lcs() []rune {
+	return d.lcs
+}
+
+func (d *Diff) Ses() []*SesElem {
+	return d.ses
+}
+
+func (d *Diff) PrintSes() {
+	for _, el := range d.ses {
+		switch el.t {
+		case SesInsert:
+			fmt.Printf("+%v\n", el.e)
+		case SesDelete:
+			fmt.Printf("-%v\n", el.e)
+		case SesCommon:
+			fmt.Printf(" %v\n", el.e)
+		}
+	}
 }
 
 func (d *Diff) Compose() {
@@ -81,10 +116,41 @@ func (d *Diff) Compose() {
 		points = append(points, &Point{x: d.route[r].x, y: d.route[r].y})
 		r = d.route[r].r
 	}
+
+	d.recordSeq(points)
 }
 
 func (d *Diff) recordSeq(points []*Point) {
-
+	px, py := 0, 0 // posx, posy
+	for i := len(points) - 1; i >= 0; i-- {
+		for px < points[i].x || py < points[i].y {
+			if points[i].x-px < points[i].y-py {
+				if d.reverse {
+					d.ses = append(d.ses, &SesElem{e: d.b[py], t: SesDelete})
+				} else {
+					d.ses = append(d.ses, &SesElem{e: d.b[py], t: SesInsert})
+				}
+				py++
+			} else if points[i].x-px > points[i].y-py {
+				if d.reverse {
+					d.ses = append(d.ses, &SesElem{e: d.a[px], t: SesInsert})
+				} else {
+					d.ses = append(d.ses, &SesElem{e: d.a[px], t: SesDelete})
+				}
+				px++
+			} else {
+				if d.reverse {
+					d.lcs = append(d.lcs, d.b[py])
+					d.ses = append(d.ses, &SesElem{e: d.b[py], t: SesCommon})
+				} else {
+					d.lcs = append(d.lcs, d.a[px])
+					d.ses = append(d.ses, &SesElem{e: d.a[px], t: SesCommon})
+				}
+				px++
+				py++
+			}
+		}
+	}
 }
 
 func (d *Diff) snake(k, pi, pd, offset int) int {
